@@ -4,6 +4,16 @@
 
 This is a full-stack web application for managing volleyball club operations, including member registration, personnel management, team formations, training sessions, and payment processing. The system is designed specifically for volleyball clubs to track members, organize teams, schedule sessions, and handle administrative tasks.
 
+## Recent Changes
+
+- **August 6, 2025**: Added comprehensive README.md with local setup instructions
+- Enhanced Personnel, Club Members, and Family pages with professional formatting and icons
+- Applied pastel color scheme throughout the application
+- Created Email Logs page to display system-generated emails
+- Fixed padding consistency across all pages to match Locations page
+- Added sample email log data for demonstration
+- Implemented role-based icons and visual enhancements
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
