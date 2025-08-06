@@ -11,6 +11,7 @@ import Families from "@/pages/families";
 import Teams from "@/pages/teams";
 import Sessions from "@/pages/sessions";
 import Payments from "@/pages/payments";
+import EmailLogs from "@/pages/email-logs";
 import NotFound from "@/pages/not-found";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -31,6 +32,7 @@ function Router() {
             <Route path="/teams" component={Teams} />
             <Route path="/sessions" component={Sessions} />
             <Route path="/payments" component={Payments} />
+            <Route path="/email-logs" component={EmailLogs} />
             <Route component={NotFound} />
           </Switch>
         </main>

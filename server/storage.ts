@@ -1,5 +1,5 @@
 import { 
-  locations, personnel, clubMembers, familyMembers, teamFormation, sessions, payments, roles, hobbies,
+  locations, personnel, clubMembers, familyMembers, teamFormation, sessions, payments, roles, hobbies, emailLog,
   type Location, type InsertLocation,
   type Personnel, type InsertPersonnel,
   type ClubMember, type InsertClubMember,
@@ -79,6 +79,9 @@ export interface IStorage {
 
   // Recent Activity
   getRecentActivity(): Promise<any[]>;
+
+  // Email Logs
+  getEmailLogs(): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -369,6 +372,28 @@ export class DatabaseStorage implements IStorage {
       timestamp: member.joinDate,
       location: 'Unknown Location' // Would need to join with locations table
     }));
+  }
+
+  // Email Logs
+  async getEmailLogs(): Promise<any[]> {
+    const logs = await db
+      .select({
+        id: emailLog.id,
+        emailDate: emailLog.emailDate,
+        senderLocationId: emailLog.senderLocationId,
+        receiverEmail: emailLog.receiverEmail,
+        subject: emailLog.subject,
+        bodySnippet: emailLog.bodySnippet,
+        senderLocation: {
+          name: locations.name,
+          type: locations.type
+        }
+      })
+      .from(emailLog)
+      .leftJoin(locations, eq(emailLog.senderLocationId, locations.id))
+      .orderBy(desc(emailLog.emailDate));
+    
+    return logs;
   }
 }
 

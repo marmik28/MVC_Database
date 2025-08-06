@@ -10,6 +10,7 @@ const navigation = [
   { name: "Teams", href: "/teams", icon: "fas fa-users-cog" },
   { name: "Sessions", href: "/sessions", icon: "fas fa-calendar-alt" },
   { name: "Payments", href: "/payments", icon: "fas fa-credit-card" },
+  { name: "Email Logs", href: "/email-logs", icon: "fas fa-envelope" },
 ];
 
 export default function Sidebar() {
