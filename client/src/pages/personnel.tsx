@@ -71,7 +71,7 @@ export default function Personnel() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="p-6 space-y-6">
         <div className="flex items-center space-x-2">
           <Users className="h-6 w-6 text-primary" />
           <h1 className="text-3xl font-bold">Personnel</h1>
@@ -89,7 +89,7 @@ export default function Personnel() {
   const otherPersonnel = personnel.filter(p => p.roleId > 5 || !p.roleId);
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Users className="h-6 w-6 text-primary" />
