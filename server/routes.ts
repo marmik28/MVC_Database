@@ -123,7 +123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Validate age >= 11
-      const birthDate = new Date(memberData.dob);
+      const birthDate = new Date(memberData.dob!);
       const age = new Date().getFullYear() - birthDate.getFullYear();
       if (age < 11) {
         return res.status(400).json({ message: "Member must be at least 11 years old" });
