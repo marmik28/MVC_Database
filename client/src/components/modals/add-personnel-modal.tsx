@@ -11,7 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
-type PersonnelFormData = z.infer<typeof insertPersonnelSchema>;
+type PersonnelFormData = z.infer<typeof insertPersonnelSchema> & { locationId?: number };
 
 interface AddPersonnelModalProps {
   isOpen: boolean;
@@ -27,8 +27,12 @@ export default function AddPersonnelModal({ isOpen, onClose }: AddPersonnelModal
     defaultValues: {}
   });
 
-  const { data: roles = [] } = useQuery({
+  const { data: roles = [] } = useQuery<any[]>({
     queryKey: ["/api/roles"],
+  });
+
+  const { data: locations = [] } = useQuery<any[]>({
+    queryKey: ["/api/locations"],
   });
 
   const createPersonnelMutation = useMutation({
@@ -150,6 +154,22 @@ export default function AddPersonnelModal({ isOpen, onClose }: AddPersonnelModal
                 <SelectContent>
                   <SelectItem value="Salaried">Salaried</SelectItem>
                   <SelectItem value="Volunteer">Volunteer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="locationId">Work Location</Label>
+              <Select onValueChange={(value) => form.setValue("locationId", parseInt(value))}>
+                <SelectTrigger data-testid="select-location">
+                  <SelectValue placeholder="Select work location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((location: any) => (
+                    <SelectItem key={location.id} value={location.id.toString()}>
+                      {location.name} ({location.type})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

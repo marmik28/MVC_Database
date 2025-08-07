@@ -35,6 +35,8 @@ interface Personnel {
   email: string;
   roleId: number;
   mandate: string;
+  locationId?: number;
+  locationName?: string;
 }
 
 const getRoleIcon = (roleId: number) => {
@@ -262,12 +264,20 @@ export default function Personnel() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center space-x-1 text-sm">
-                          <MapPin className="h-3 w-3" />
-                          <div>
-                            <div>{person.address}</div>
-                            <div className="text-muted-foreground">
-                              {person.city}, {person.province} {person.postalCode}
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-1 text-sm">
+                            <Building className="h-3 w-3 text-primary" />
+                            <span className="font-medium">
+                              {person.locationName || 'No Location Assigned'}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+                            <MapPin className="h-3 w-3" />
+                            <div>
+                              <div>{person.address}</div>
+                              <div>
+                                {person.city}, {person.province} {person.postalCode}
+                              </div>
                             </div>
                           </div>
                         </div>

@@ -1,5 +1,5 @@
 import { 
-  locations, personnel, clubMembers, familyMembers, secondaryFamilyMembers, teamFormation, sessions, payments, roles, hobbies, emailLog,
+  locations, personnel, personnelLocationHistory, clubMembers, familyMembers, secondaryFamilyMembers, teamFormation, sessions, payments, roles, hobbies, emailLog,
   memberHobby, teamMembers, familyMemberChild,
   type Location, type InsertLocation,
   type Personnel, type InsertPersonnel,
@@ -24,9 +24,11 @@ export interface IStorage {
   // Personnel
   getPersonnel(): Promise<Personnel[]>;
   getPersonnelById(id: number): Promise<Personnel | undefined>;
-  createPersonnel(personnel: InsertPersonnel): Promise<Personnel>;
-  updatePersonnel(id: number, personnel: Partial<InsertPersonnel>): Promise<Personnel>;
+  createPersonnel(personnel: InsertPersonnel & { locationId?: number }): Promise<Personnel>;
+  updatePersonnel(id: number, personnel: Partial<InsertPersonnel> & { locationId?: number }): Promise<Personnel>;
   deletePersonnel(id: number): Promise<void>;
+  addPersonnelLocationHistory(personnelId: number, locationId: number, startDate?: string): Promise<void>;
+  updatePersonnelLocation(personnelId: number, locationId: number, startDate?: string): Promise<void>;
 
   // Club Members
   getClubMembers(): Promise<any[]>;
@@ -126,7 +128,45 @@ export class DatabaseStorage implements IStorage {
 
   // Personnel
   async getPersonnel(): Promise<Personnel[]> {
-    return await db.select().from(personnel).orderBy(asc(personnel.lastName));
+    try {
+      const personnelList = await db.select().from(personnel).orderBy(asc(personnel.lastName));
+      
+      // Add location information for each person
+      const result = [];
+      for (const person of personnelList) {
+        try {
+          // Find current location (where end_date is null or in the future)
+          const [currentLocation] = await db
+            .select({
+              locationId: personnelLocationHistory.locationId,
+              locationName: locations.name
+            })
+            .from(personnelLocationHistory)
+            .leftJoin(locations, eq(personnelLocationHistory.locationId, locations.id))
+            .where(eq(personnelLocationHistory.personnelId, person.id))
+            .orderBy(desc(personnelLocationHistory.startDate))
+            .limit(1);
+          
+          result.push({
+            ...person,
+            locationId: currentLocation?.locationId || null,
+            locationName: currentLocation?.locationName || null
+          });
+        } catch (locationError) {
+          // If location query fails, add person without location data
+          result.push({
+            ...person,
+            locationId: null,
+            locationName: null
+          });
+        }
+      }
+      
+      return result as any;
+    } catch (error) {
+      console.error('Error fetching personnel:', error);
+      throw error;
+    }
   }
 
   async getPersonnelById(id: number): Promise<Personnel | undefined> {
@@ -134,22 +174,60 @@ export class DatabaseStorage implements IStorage {
     return person || undefined;
   }
 
-  async createPersonnel(person: InsertPersonnel): Promise<Personnel> {
-    const [newPersonnel] = await db.insert(personnel).values(person).returning();
+  async createPersonnel(person: InsertPersonnel & { locationId?: number }): Promise<Personnel> {
+    const { locationId, ...personnelData } = person;
+    const [newPersonnel] = await db.insert(personnel).values(personnelData).returning();
+    
+    // Add location history if locationId is provided
+    if (locationId && newPersonnel.id) {
+      await this.addPersonnelLocationHistory(newPersonnel.id, locationId);
+    }
+    
     return newPersonnel;
   }
 
-  async updatePersonnel(id: number, person: Partial<InsertPersonnel>): Promise<Personnel> {
+  async updatePersonnel(id: number, person: Partial<InsertPersonnel> & { locationId?: number }): Promise<Personnel> {
+    const { locationId, ...personnelData } = person;
     const [updatedPersonnel] = await db
       .update(personnel)
-      .set(person)
+      .set(personnelData)
       .where(eq(personnel.id, id))
       .returning();
+    
+    // Update location if locationId is provided
+    if (locationId) {
+      await this.updatePersonnelLocation(id, locationId);
+    }
+    
     return updatedPersonnel;
   }
 
   async deletePersonnel(id: number): Promise<void> {
     await db.delete(personnel).where(eq(personnel.id, id));
+  }
+
+  async addPersonnelLocationHistory(personnelId: number, locationId: number, startDate?: string): Promise<void> {
+    await db.insert(personnelLocationHistory).values({
+      personnelId: personnelId,
+      locationId: locationId,
+      startDate: startDate || sql`CURRENT_DATE`
+    });
+  }
+
+  async updatePersonnelLocation(personnelId: number, locationId: number, startDate?: string): Promise<void> {
+    // End current location assignment
+    await db
+      .update(personnelLocationHistory)
+      .set({ endDate: sql`CURRENT_DATE` })
+      .where(
+        and(
+          eq(personnelLocationHistory.personnelId, personnelId),
+          sql`${personnelLocationHistory.endDate} IS NULL`
+        )
+      );
+    
+    // Add new location assignment
+    await this.addPersonnelLocationHistory(personnelId, locationId, startDate);
   }
 
   // Club Members
