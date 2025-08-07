@@ -164,22 +164,6 @@ export default function Payments() {
         </div>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-        <h4 className="text-sm font-medium text-blue-800 mb-2">Membership Fee Rules</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-blue-700">
-          <div>
-            <strong>Minor Members (11-17 years):</strong> $100/year
-            <br />
-            <span className="text-blue-600">Excess payments become donations</span>
-          </div>
-          <div>
-            <strong>Major Members (18+ years):</strong> $200/year
-            <br />
-            <span className="text-blue-600">Maximum 4 installments allowed</span>
-          </div>
-        </div>
-      </div>
-
       <DataTable
         title="All Payments"
         columns={columns}
