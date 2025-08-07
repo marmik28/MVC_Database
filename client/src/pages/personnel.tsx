@@ -14,10 +14,26 @@ import {
   Shield, 
   User,
   Building,
-  Crown
+  Crown,
+  Edit,
+  Trash2
 } from "lucide-react";
 import { useState } from "react";
 import AddPersonnelModal from "@/components/modals/add-personnel-modal";
+import EditPersonnelModal from "@/components/modals/edit-personnel-modal.tsx";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 
 interface Personnel {
@@ -66,10 +82,43 @@ const getRoleName = (roleId: number) => {
 
 export default function Personnel() {
   const [showAddPersonnel, setShowAddPersonnel] = useState(false);
+  const [editingPersonnel, setEditingPersonnel] = useState<Personnel | null>(null);
+  const [deletingPersonnel, setDeletingPersonnel] = useState<Personnel | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: personnel = [], isLoading } = useQuery<Personnel[]>({
     queryKey: ["/api/personnel"],
   });
+
+  const deletePersonnelMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/personnel/${id}`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/personnel"] });
+      toast({ title: "Success", description: "Personnel deleted successfully" });
+      setDeletingPersonnel(null);
+    },
+    onError: () => {
+      toast({ 
+        title: "Error", 
+        description: "Failed to delete personnel",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleDeletePersonnel = (person: Personnel) => {
+    setDeletingPersonnel(person);
+  };
+
+  const confirmDelete = () => {
+    if (deletingPersonnel) {
+      deletePersonnelMutation.mutate(deletingPersonnel.id);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -87,8 +136,7 @@ export default function Personnel() {
     );
   }
 
-  const headLocationPersonnel = personnel.filter(p => p.roleId >= 1 && p.roleId <= 5);
-  const otherPersonnel = personnel.filter(p => p.roleId > 5 || !p.roleId);
+  // Remove head office leadership filtering
 
   return (
     <div className="p-6 space-y-6">
@@ -107,67 +155,6 @@ export default function Personnel() {
         </Button>
       </div>
 
-      {/* Head Office Leadership */}
-      {headLocationPersonnel.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Building className="h-5 w-5" />
-              <span>Head Office Leadership</span>
-              <Badge variant="outline" className="ml-2">
-                Montreal Volleyball Club
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {headLocationPersonnel.map((person) => (
-                <Card key={person.id} className="border-l-4 border-l-primary" data-testid={`personnel-card-${person.id}`}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="bg-primary/10 p-3 rounded-full">
-                          {getRoleIcon(person.roleId)}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-lg">
-                            {person.firstName} {person.lastName}
-                          </h3>
-                          <Badge variant="secondary" className="text-xs">
-                            {getRoleName(person.roleId)}
-                          </Badge>
-                        </div>
-                      </div>
-                      <Badge variant={person.mandate === "Salaried" ? "default" : "outline"}>
-                        {person.mandate}
-                      </Badge>
-                    </div>
-                    
-                    <div className="mt-4 space-y-2">
-                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                        <Mail className="h-4 w-4" />
-                        <span>{person.email}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                        <Phone className="h-4 w-4" />
-                        <span>{person.phone}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4" />
-                        <span>{person.city}, {person.province}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
-                        <span>Born: {format(new Date(person.dob), "MMM dd, yyyy")}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* All Personnel Table */}
       <Card>
@@ -205,6 +192,7 @@ export default function Personnel() {
                     <TableHead>Contact Information</TableHead>
                     <TableHead>Personal Details</TableHead>
                     <TableHead>Location</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -282,6 +270,26 @@ export default function Personnel() {
                           </div>
                         </div>
                       </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setEditingPersonnel(person)}
+                            data-testid={`edit-personnel-${person.id}`}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleDeletePersonnel(person)}
+                            data-testid={`delete-personnel-${person.id}`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -297,6 +305,36 @@ export default function Personnel() {
           onClose={() => setShowAddPersonnel(false)}
         />
       )}
+
+      {editingPersonnel && (
+        <EditPersonnelModal
+          isOpen={!!editingPersonnel}
+          onClose={() => setEditingPersonnel(null)}
+          personnel={editingPersonnel}
+        />
+      )}
+
+      <AlertDialog open={!!deletingPersonnel} onOpenChange={() => setDeletingPersonnel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Personnel</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {deletingPersonnel?.firstName} {deletingPersonnel?.lastName}? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deletePersonnelMutation.isPending}
+            >
+              {deletePersonnelMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
