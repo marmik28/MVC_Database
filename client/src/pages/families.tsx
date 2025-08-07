@@ -108,9 +108,18 @@ export default function Families() {
   }
 
   // Only show family members who have relationships with children
-  const familiesWithChildren = families.filter(f => f.children && f.children.length > 0);
-  const primaryFamilies = familiesWithChildren.filter(f => f.type === 'primary');
-  const secondaryFamilies = familiesWithChildren.filter(f => f.type === 'secondary');
+  // Primary families must have direct children relationships
+  const primaryFamilies = families.filter(f => f.type === 'primary' && f.children && f.children.length > 0);
+  
+  // Secondary families are shown if they're linked to primary families that have children
+  const primaryFamilyIds = primaryFamilies.map(pf => pf.id);
+  const secondaryFamilies = families.filter(f => 
+    f.type === 'secondary' && 
+    (f.primaryFamilyId && primaryFamilyIds.includes(f.primaryFamilyId))
+  );
+  
+  // Combined list for statistics
+  const familiesWithChildren = [...primaryFamilies, ...secondaryFamilies];
 
   return (
     <div className="p-6 space-y-6">
