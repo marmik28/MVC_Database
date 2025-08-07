@@ -87,7 +87,7 @@ export default function Teams() {
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>('');
-  const [sessionDate, setSessionDate] = useState<string>('');
+  const [sessionDate, setSessionDate] = useState<string>('12-12-2025');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -360,17 +360,6 @@ export default function Teams() {
                   <SelectItem value="Libero">Libero</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="session-date">Session Date (for conflict checking)</Label>
-              <Input
-                id="session-date"
-                type="date"
-                value={sessionDate}
-                onChange={(e) => setSessionDate(e.target.value)}
-                data-testid="input-session-date"
-              />
             </div>
           </div>
           

@@ -271,16 +271,6 @@ export default function PaymentModal({ isOpen, onClose }: PaymentModalProps) {
             </div>
           )}
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-yellow-800 mb-2">Payment Rules</h4>
-            <ul className="text-xs text-yellow-700 space-y-1">
-              <li>• Minor members: $100/year, Major members: $200/year</li>
-              <li>• Maximum 4 installments allowed per membership year</li>
-              <li>• Payments exceeding annual fee are automatically marked as donations</li>
-              <li>• Members with unpaid fees become inactive status</li>
-            </ul>
-          </div>
-
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
             <Button 
               type="button" 
