@@ -509,7 +509,11 @@ export default function Members() {
         <AddMemberModal
           isOpen={!!editingMember}
           onClose={() => setEditingMember(null)}
-          editMember={editingMember}
+          editMember={editingMember ? {
+            ...editingMember,
+            gender: editingMember.gender as "Male" | "Female",
+            status: editingMember.status as "Active" | "Inactive"
+          } : null}
         />
       )}
 

@@ -16,49 +16,75 @@ type LocationFormData = z.infer<typeof insertLocationSchema>;
 interface AddLocationModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editLocation?: {
+    id: number;
+    type: "Head" | "Branch";
+    name: string;
+    address: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    phone: string;
+    webAddress: string;
+    capacity: number;
+  } | null;
 }
 
-export default function AddLocationModal({ isOpen, onClose }: AddLocationModalProps) {
+export default function AddLocationModal({ isOpen, onClose, editLocation }: AddLocationModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const form = useForm<LocationFormData>({
     resolver: zodResolver(insertLocationSchema),
-    defaultValues: {
+    defaultValues: editLocation ? {
+      type: editLocation.type,
+      name: editLocation.name,
+      address: editLocation.address,
+      city: editLocation.city,
+      province: editLocation.province,
+      postalCode: editLocation.postalCode,
+      phone: editLocation.phone,
+      webAddress: editLocation.webAddress,
+      capacity: editLocation.capacity
+    } : {
       type: "Branch"
     }
   });
 
-  const createLocationMutation = useMutation({
+  const locationMutation = useMutation({
     mutationFn: async (data: LocationFormData) => {
-      const response = await apiRequest("POST", "/api/locations", data);
+      const url = editLocation ? `/api/locations/${editLocation.id}` : "/api/locations";
+      const method = editLocation ? "PUT" : "POST";
+      const response = await apiRequest(method, url, data);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/locations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-      toast({ title: "Success", description: "Location created successfully" });
+      const action = editLocation ? "updated" : "created";
+      toast({ title: "Success", description: `Location ${action} successfully` });
       onClose();
       form.reset();
     },
     onError: (error: any) => {
+      const action = editLocation ? "update" : "create";
       toast({ 
         title: "Error", 
-        description: error.message || "Failed to create location",
+        description: error.message || `Failed to ${action} location`,
         variant: "destructive"
       });
     }
   });
 
   const onSubmit = (data: LocationFormData) => {
-    createLocationMutation.mutate(data);
+    locationMutation.mutate(data);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add New Location</DialogTitle>
+          <DialogTitle>{editLocation ? "Edit Location" : "Add New Location"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -77,7 +103,10 @@ export default function AddLocationModal({ isOpen, onClose }: AddLocationModalPr
 
             <div>
               <Label htmlFor="type">Type</Label>
-              <Select onValueChange={(value) => form.setValue("type", value as "Head" | "Branch")}>
+              <Select 
+                value={form.watch("type")} 
+                onValueChange={(value) => form.setValue("type", value as "Head" | "Branch")}
+              >
                 <SelectTrigger data-testid="select-location-type">
                   <SelectValue placeholder="Select Type" />
                 </SelectTrigger>
@@ -111,7 +140,10 @@ export default function AddLocationModal({ isOpen, onClose }: AddLocationModalPr
 
             <div>
               <Label htmlFor="province">Province</Label>
-              <Select onValueChange={(value) => form.setValue("province", value)}>
+              <Select 
+                value={form.watch("province") || ""} 
+                onValueChange={(value) => form.setValue("province", value)}
+              >
                 <SelectTrigger data-testid="select-province">
                   <SelectValue placeholder="Select Province" />
                 </SelectTrigger>
@@ -172,10 +204,13 @@ export default function AddLocationModal({ isOpen, onClose }: AddLocationModalPr
             </Button>
             <Button 
               type="submit" 
-              disabled={createLocationMutation.isPending}
-              data-testid="button-create-location"
+              disabled={locationMutation.isPending}
+              data-testid={editLocation ? "button-update-location" : "button-create-location"}
             >
-              {createLocationMutation.isPending ? "Creating..." : "Create Location"}
+              {locationMutation.isPending 
+                ? (editLocation ? "Updating..." : "Creating...") 
+                : (editLocation ? "Update Location" : "Create Location")
+              }
             </Button>
           </div>
         </form>

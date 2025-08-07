@@ -44,6 +44,7 @@ interface Location {
 
 export default function Locations() {
   const [showAddLocation, setShowAddLocation] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [deletingLocation, setDeletingLocation] = useState<Location | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -67,8 +68,18 @@ export default function Locations() {
     },
   });
 
+  const handleEdit = (location: Location) => {
+    setEditingLocation(location);
+    setShowAddLocation(true);
+  };
+
   const handleDelete = (location: Location) => {
     setDeletingLocation(location);
+  };
+
+  const handleCloseModal = () => {
+    setShowAddLocation(false);
+    setEditingLocation(null);
   };
 
   const confirmDelete = () => {
@@ -262,7 +273,7 @@ export default function Locations() {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            disabled
+                            onClick={() => handleEdit(location)}
                             data-testid={`edit-location-${location.id}`}
                           >
                             <Edit className="h-3 w-3" />
@@ -311,7 +322,8 @@ export default function Locations() {
       {showAddLocation && (
         <AddLocationModal
           isOpen={showAddLocation}
-          onClose={() => setShowAddLocation(false)}
+          onClose={handleCloseModal}
+          editLocation={editingLocation}
         />
       )}
 
