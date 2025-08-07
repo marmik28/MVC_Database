@@ -107,8 +107,10 @@ export default function Families() {
     );
   }
 
-  const primaryFamilies = families.filter(f => f.type === 'primary');
-  const secondaryFamilies = families.filter(f => f.type === 'secondary');
+  // Only show family members who have relationships with children
+  const familiesWithChildren = families.filter(f => f.children && f.children.length > 0);
+  const primaryFamilies = familiesWithChildren.filter(f => f.type === 'primary');
+  const secondaryFamilies = familiesWithChildren.filter(f => f.type === 'secondary');
 
   return (
     <div className="p-6 space-y-6">
@@ -136,8 +138,8 @@ export default function Families() {
                 <Home className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{families.length}</p>
-                <p className="text-xs text-muted-foreground">Total Family Members</p>
+                <p className="text-2xl font-bold">{familiesWithChildren.length}</p>
+                <p className="text-xs text-muted-foreground">Guardians with Children</p>
               </div>
             </div>
           </CardContent>
