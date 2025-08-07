@@ -17,11 +17,35 @@ import {
   Scale,
   Ruler,
   CheckCircle,
-  XCircle
+  XCircle,
+  Plus,
+  X,
+  Edit,
+  Trash2,
+  Gamepad2
 } from "lucide-react";
 import { useState } from "react";
 import AddMemberModal from "@/components/modals/add-member-modal";
 import { format } from "date-fns";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+interface Hobby {
+  id: number;
+  name: string;
+}
 
 interface ClubMember {
   id: number;
@@ -42,6 +66,8 @@ interface ClubMember {
   status: string;
   joinDate: string;
   locationId: number;
+  locationName?: string;
+  hobbies?: Hobby[];
 }
 
 const getAgeCategory = (dob: string) => {
@@ -57,10 +83,83 @@ const getAgeIcon = (dob: string) => {
 
 export default function Members() {
   const [showAddMember, setShowAddMember] = useState(false);
+  const [selectedMemberForHobby, setSelectedMemberForHobby] = useState<number | null>(null);
+  const [editingMember, setEditingMember] = useState<ClubMember | null>(null);
+  const [deletingMember, setDeletingMember] = useState<ClubMember | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: members = [], isLoading } = useQuery<ClubMember[]>({
     queryKey: ["/api/members"],
   });
+
+  const { data: allHobbies = [] } = useQuery<Hobby[]>({
+    queryKey: ["/api/hobbies"],
+  });
+
+  const addHobbyMutation = useMutation({
+    mutationFn: async ({ memberId, hobbyId }: { memberId: number; hobbyId: number }) => {
+      return await apiRequest("POST", `/api/members/${memberId}/hobbies`, { hobbyId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      toast({ title: "Success", description: "Hobby added successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to add hobby", variant: "destructive" });
+    },
+  });
+
+  const removeHobbyMutation = useMutation({
+    mutationFn: async ({ memberId, hobbyId }: { memberId: number; hobbyId: number }) => {
+      return await apiRequest("DELETE", `/api/members/${memberId}/hobbies/${hobbyId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      toast({ title: "Success", description: "Hobby removed successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to remove hobby", variant: "destructive" });
+    },
+  });
+
+  const handleAddHobby = (memberId: number, hobbyId: number) => {
+    addHobbyMutation.mutate({ memberId, hobbyId });
+    setSelectedMemberForHobby(null);
+  };
+
+  const handleRemoveHobby = (memberId: number, hobbyId: number) => {
+    removeHobbyMutation.mutate({ memberId, hobbyId });
+  };
+
+  const deleteMemberMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("DELETE", `/api/members/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      toast({ title: "Success", description: "Member deleted successfully" });
+      setDeletingMember(null);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete member", variant: "destructive" });
+    },
+  });
+
+  const handleEdit = (member: ClubMember) => {
+    setEditingMember(member);
+  };
+
+  const handleDelete = (member: ClubMember) => {
+    setDeletingMember(member);
+  };
+
+  const confirmDelete = () => {
+    if (deletingMember) {
+      deleteMemberMutation.mutate(deletingMember.id);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -194,8 +293,9 @@ export default function Members() {
                     <TableHead>Category & Status</TableHead>
                     <TableHead>Contact Information</TableHead>
                     <TableHead>Physical Details</TableHead>
+                    <TableHead>Hobbies & Interests</TableHead>
                     <TableHead>Personal Information</TableHead>
-                    <TableHead>Location</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -267,6 +367,66 @@ export default function Members() {
                         </div>
                       </TableCell>
                       <TableCell>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-1">
+                            {member.hobbies?.map((hobby) => (
+                              <Badge
+                                key={hobby.id}
+                                variant="outline"
+                                className="text-xs flex items-center space-x-1"
+                                data-testid={`hobby-badge-${hobby.id}`}
+                              >
+                                <Gamepad2 className="h-3 w-3" />
+                                <span>{hobby.name}</span>
+                                <button
+                                  onClick={() => handleRemoveHobby(member.id, hobby.id)}
+                                  className="ml-1 hover:text-red-500"
+                                  data-testid={`remove-hobby-${hobby.id}`}
+                                >
+                                  <X className="h-2 w-2" />
+                                </button>
+                              </Badge>
+                            )) || []}
+                          </div>
+                          {selectedMemberForHobby === member.id ? (
+                            <div className="flex items-center space-x-2">
+                              <Select onValueChange={(value) => handleAddHobby(member.id, parseInt(value))}>
+                                <SelectTrigger className="w-32">
+                                  <SelectValue placeholder="Add hobby" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {allHobbies
+                                    .filter(hobby => !member.hobbies?.some(h => h.id === hobby.id))
+                                    .map((hobby) => (
+                                      <SelectItem key={hobby.id} value={hobby.id.toString()}>
+                                        {hobby.name}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedMemberForHobby(null)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedMemberForHobby(member.id)}
+                              data-testid={`add-hobby-${member.id}`}
+                              className="text-xs"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add Hobby
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <div className="space-y-1 text-sm">
                           <div className="flex items-center space-x-1">
                             <Calendar className="h-3 w-3" />
@@ -275,11 +435,9 @@ export default function Members() {
                           <div className="text-muted-foreground text-xs">
                             Age: {new Date().getFullYear() - new Date(member.dob).getFullYear()}
                           </div>
-                          <div className="text-muted-foreground text-xs">
-                            SSN: {member.ssn.slice(-4).padStart(member.ssn.length, '*')}
-                          </div>
-                          <div className="text-muted-foreground text-xs">
-                            Medicare: {member.medicareCard.slice(-4).padStart(member.medicareCard.length, '*')}
+                          <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3" />
+                            <span>{member.locationName || `Location ${member.locationId}`}</span>
                           </div>
                           <div className="flex items-center space-x-1 text-xs text-muted-foreground">
                             <Heart className="h-3 w-3" />
@@ -288,14 +446,23 @@ export default function Members() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center space-x-1 text-sm">
-                          <MapPin className="h-3 w-3" />
-                          <div>
-                            <div>{member.address}</div>
-                            <div className="text-muted-foreground">
-                              {member.city}, {member.province} {member.postalCode}
-                            </div>
-                          </div>
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleEdit(member)}
+                            data-testid={`edit-member-${member.id}`}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleDelete(member)}
+                            data-testid={`delete-member-${member.id}`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -329,12 +496,46 @@ export default function Members() {
         </CardContent>
       </Card>
 
+      {/* Add Member Modal */}
       {showAddMember && (
         <AddMemberModal
           isOpen={showAddMember}
           onClose={() => setShowAddMember(false)}
         />
       )}
+
+      {/* Edit Member Modal */}
+      {editingMember && (
+        <AddMemberModal
+          isOpen={!!editingMember}
+          onClose={() => setEditingMember(null)}
+          editMember={editingMember}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingMember} onOpenChange={() => setDeletingMember(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center space-x-2">
+              <User className="h-5 w-5 text-red-500" />
+              <span>Delete Member</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingMember?.firstName} {deletingMember?.lastName}"? This action cannot be undone and will remove all associated data including team assignments, payments, and hobby associations.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Member
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
