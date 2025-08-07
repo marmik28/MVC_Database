@@ -396,47 +396,6 @@ export default function Families() {
         </CardContent>
       </Card>
 
-      {/* Information Cards */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="border-l-4 border-l-primary">
-          <CardContent className="pt-6">
-            <div className="flex items-start space-x-3">
-              <div className="bg-primary/10 p-2 rounded-full">
-                <Shield className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Family Member Types</h3>
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <div>• <strong>Primary:</strong> Main guardians with full details</div>
-                  <div>• <strong>Secondary:</strong> Emergency contacts and additional family</div>
-                  <div>• Linked to specific club members as children</div>
-                  <div>• Required for minor member enrollment</div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-secondary">
-          <CardContent className="pt-6">
-            <div className="flex items-start space-x-3">
-              <div className="bg-secondary/10 p-2 rounded-full">
-                <Heart className="h-5 w-5 text-secondary" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Relationship Types</h3>
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <div>• <Heart className="h-3 w-3 inline text-red-500" /> Father, Mother (Primary)</div>
-                  <div>• <Users className="h-3 w-3 inline text-blue-500" /> Grandfather, Grandmother</div>
-                  <div>• <Shield className="h-3 w-3 inline text-green-500" /> Tutor, Partner (Legal)</div>
-                  <div>• <User className="h-3 w-3 inline text-gray-500" /> Friend, Other (Emergency)</div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {showAddFamily && (
         <AddFamilyModal
           isOpen={showAddFamily}

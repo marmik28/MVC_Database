@@ -10,6 +10,7 @@ const pageNames: { [key: string]: string } = {
   "/teams": "Teams",
   "/sessions": "Sessions",
   "/payments": "Payments",
+  "/email-logs": "Emails",
 };
 
 export default function Header() {

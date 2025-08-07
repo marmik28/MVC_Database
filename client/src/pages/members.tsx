@@ -474,28 +474,6 @@ export default function Members() {
         </CardContent>
       </Card>
 
-      {/* Business Rules Card */}
-      <Card className="border-l-4 border-l-primary">
-        <CardContent className="pt-6">
-          <div className="flex items-start space-x-3">
-            <div className="bg-primary/10 p-2 rounded-full">
-              <Activity className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-semibold mb-1">Club Member Business Rules</h3>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <div>• Major Members: 18+ years old with full club privileges</div>
-                <div>• Minor Members: Under 18, require family member registration for emergency contacts</div>
-                <div>• All members must have unique SSN and Medicare card numbers</div>
-                <div>• Teams are segregated by gender (Male/Female teams only)</div>
-                <div>• Physical measurements (height/weight) are tracked for team formation and health monitoring</div>
-                <div>• Active status required for team participation and session attendance</div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Add Member Modal */}
       {showAddMember && (
         <AddMemberModal

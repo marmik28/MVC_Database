@@ -297,27 +297,6 @@ export default function Locations() {
         </CardContent>
       </Card>
 
-      {/* Business Rules Card */}
-      <Card className="border-l-4 border-l-primary">
-        <CardContent className="pt-6">
-          <div className="flex items-start space-x-3">
-            <div className="bg-primary/10 p-2 rounded-full">
-              <Building className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-semibold mb-1">Location Business Rules</h3>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <div>• Head location must have: General Manager (President), Deputy, Treasurer, Secretary, Administrators</div>
-                <div>• General Manager of head location serves as Club President</div>
-                <div>• Personnel can operate at only one location at a time</div>
-                <div>• Capacity tracking helps manage member assignments and facility planning</div>
-                <div>• Each location can host multiple teams and training sessions</div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Add Location Modal */}
       {showAddLocation && (
         <AddLocationModal

@@ -157,28 +157,6 @@ export default function EmailLogs() {
         </CardContent>
       </Card>
 
-      {emailLogs && emailLogs.length > 0 && (
-        <Card className="border-l-4 border-l-primary">
-          <CardContent className="pt-6">
-            <div className="flex items-start space-x-3">
-              <div className="bg-primary/10 p-2 rounded-full">
-                <Mail className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Email System Information</h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                  The system automatically sends emails every Sunday for upcoming session schedules.
-                </p>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div>• Email logs show the first 100 characters of each message</div>
-                  <div>• Emails include member details, coach information, and session addresses</div>
-                  <div>• Weekly notifications are sent to all active club members</div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
