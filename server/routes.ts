@@ -88,6 +88,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/personnel/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const personnelData = insertPersonnelSchema.partial().parse(req.body);
+      const person = await storage.updatePersonnel(id, personnelData);
+      res.json(person);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid personnel data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update personnel" });
+    }
+  });
+
+  app.delete("/api/personnel/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deletePersonnel(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete personnel" });
+    }
+  });
+
   // Club Members
   app.get("/api/members", async (req, res) => {
     try {
@@ -138,6 +162,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/members/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const memberData = insertClubMemberSchema.partial().parse(req.body);
+      const member = await storage.updateClubMember(id, memberData);
+      res.json(member);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid member data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update member" });
+    }
+  });
+
+  app.delete("/api/members/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteClubMember(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete member" });
+    }
+  });
+
+  // Member Hobby Management
+  app.post("/api/members/:id/hobbies", async (req, res) => {
+    try {
+      const memberId = parseInt(req.params.id);
+      const { hobbyId } = req.body;
+      await storage.addMemberHobby(memberId, hobbyId);
+      res.status(201).json({ message: "Hobby added successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to add hobby" });
+    }
+  });
+
+  app.delete("/api/members/:id/hobbies/:hobbyId", async (req, res) => {
+    try {
+      const memberId = parseInt(req.params.id);
+      const hobbyId = parseInt(req.params.hobbyId);
+      await storage.removeMemberHobby(memberId, hobbyId);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to remove hobby" });
+    }
+  });
+
   // Family Members
   app.get("/api/families", async (req, res) => {
     try {
@@ -161,6 +232,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/families/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const familyData = insertFamilyMemberSchema.partial().parse(req.body);
+      const family = await storage.updateFamilyMember(id, familyData);
+      res.json(family);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid family data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update family member" });
+    }
+  });
+
+  app.delete("/api/families/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteFamilyMember(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete family member" });
+    }
+  });
+
+  // Secondary Family Members
+  app.post("/api/families/secondary", async (req, res) => {
+    try {
+      const secondaryData = req.body;
+      const secondary = await storage.createSecondaryFamilyMember(secondaryData);
+      res.status(201).json(secondary);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create secondary family member" });
+    }
+  });
+
+  app.put("/api/families/secondary/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const secondaryData = req.body;
+      const secondary = await storage.updateSecondaryFamilyMember(id, secondaryData);
+      res.json(secondary);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update secondary family member" });
+    }
+  });
+
+  app.delete("/api/families/secondary/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteSecondaryFamilyMember(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete secondary family member" });
+    }
+  });
+
   // Teams
   app.get("/api/teams", async (req, res) => {
     try {
@@ -181,6 +308,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid team data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create team" });
+    }
+  });
+
+  app.put("/api/teams/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const teamData = insertTeamFormationSchema.partial().parse(req.body);
+      const team = await storage.updateTeamFormation(id, teamData);
+      res.json(team);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid team data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update team" });
+    }
+  });
+
+  app.delete("/api/teams/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteTeamFormation(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete team" });
+    }
+  });
+
+  // Team Member Management
+  app.post("/api/teams/:id/members", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const { memberId, role, sessionDate, startTime } = req.body;
+      
+      // Validate time conflict
+      const isValid = await storage.validateTeamMemberAssignment(memberId, sessionDate, startTime);
+      if (!isValid) {
+        return res.status(400).json({ message: "Member has a conflicting session within 3 hours" });
+      }
+      
+      await storage.addTeamMember(teamId, memberId, role);
+      res.status(201).json({ message: "Team member added successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to add team member" });
+    }
+  });
+
+  app.delete("/api/teams/:id/members/:memberId", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const memberId = parseInt(req.params.memberId);
+      await storage.removeTeamMember(teamId, memberId);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to remove team member" });
+    }
+  });
+
+  app.get("/api/teams/:id/members", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const members = await storage.getTeamMembers(teamId);
+      res.json(members);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch team members" });
     }
   });
 

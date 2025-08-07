@@ -1,5 +1,6 @@
 import { 
-  locations, personnel, clubMembers, familyMembers, teamFormation, sessions, payments, roles, hobbies, emailLog,
+  locations, personnel, clubMembers, familyMembers, secondaryFamilyMembers, teamFormation, sessions, payments, roles, hobbies, emailLog,
+  memberHobby, teamMembers, familyMemberChild,
   type Location, type InsertLocation,
   type Personnel, type InsertPersonnel,
   type ClubMember, type InsertClubMember,
@@ -28,28 +29,38 @@ export interface IStorage {
   deletePersonnel(id: number): Promise<void>;
 
   // Club Members
-  getClubMembers(): Promise<ClubMember[]>;
-  getClubMemberById(id: number): Promise<ClubMember | undefined>;
+  getClubMembers(): Promise<any[]>;
+  getClubMemberById(id: number): Promise<any | undefined>;
   createClubMember(member: InsertClubMember): Promise<ClubMember>;
   updateClubMember(id: number, member: Partial<InsertClubMember>): Promise<ClubMember>;
   deleteClubMember(id: number): Promise<void>;
-  getActiveClubMembers(): Promise<ClubMember[]>;
+  getActiveClubMembers(): Promise<any[]>;
   validateUniqueSSN(ssn: string, excludeId?: number): Promise<boolean>;
   validateUniqueMedicare(medicareCard: string, excludeId?: number): Promise<boolean>;
+  addMemberHobby(memberId: number, hobbyId: number): Promise<void>;
+  removeMemberHobby(memberId: number, hobbyId: number): Promise<void>;
+  getMemberHobbies(memberId: number): Promise<Hobby[]>;
 
   // Family Members
-  getFamilyMembers(): Promise<FamilyMember[]>;
+  getFamilyMembers(): Promise<any[]>;
   getFamilyMemberById(id: number): Promise<FamilyMember | undefined>;
   createFamilyMember(member: InsertFamilyMember): Promise<FamilyMember>;
   updateFamilyMember(id: number, member: Partial<InsertFamilyMember>): Promise<FamilyMember>;
   deleteFamilyMember(id: number): Promise<void>;
+  createSecondaryFamilyMember(data: any): Promise<any>;
+  updateSecondaryFamilyMember(id: number, data: any): Promise<any>;
+  deleteSecondaryFamilyMember(id: number): Promise<void>;
 
   // Team Formations
-  getTeamFormations(): Promise<TeamFormation[]>;
-  getTeamFormationById(id: number): Promise<TeamFormation | undefined>;
+  getTeamFormations(): Promise<any[]>;
+  getTeamFormationById(id: number): Promise<any | undefined>;
   createTeamFormation(team: InsertTeamFormation): Promise<TeamFormation>;
   updateTeamFormation(id: number, team: Partial<InsertTeamFormation>): Promise<TeamFormation>;
   deleteTeamFormation(id: number): Promise<void>;
+  addTeamMember(teamId: number, memberId: number, role: string): Promise<void>;
+  removeTeamMember(teamId: number, memberId: number): Promise<void>;
+  getTeamMembers(teamId: number): Promise<any[]>;
+  validateTeamMemberAssignment(memberId: number, sessionDate: string, startTime: string): Promise<boolean>;
 
   // Sessions
   getSessions(): Promise<Session[]>;
@@ -142,12 +153,72 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Club Members
-  async getClubMembers(): Promise<ClubMember[]> {
-    return await db.select().from(clubMembers).orderBy(asc(clubMembers.lastName));
+  async getClubMembers(): Promise<any[]> {
+    const members = await db
+      .select({
+        id: clubMembers.id,
+        firstName: clubMembers.firstName,
+        lastName: clubMembers.lastName,
+        dob: clubMembers.dob,
+        height: clubMembers.height,
+        weight: clubMembers.weight,
+        ssn: clubMembers.ssn,
+        medicareCard: clubMembers.medicareCard,
+        phone: clubMembers.phone,
+        address: clubMembers.address,
+        city: clubMembers.city,
+        province: clubMembers.province,
+        postalCode: clubMembers.postalCode,
+        email: clubMembers.email,
+        gender: clubMembers.gender,
+        status: clubMembers.status,
+        joinDate: clubMembers.joinDate,
+        locationId: clubMembers.locationId,
+        locationName: locations.name
+      })
+      .from(clubMembers)
+      .leftJoin(locations, eq(clubMembers.locationId, locations.id))
+      .orderBy(asc(clubMembers.lastName));
+    
+    // Get hobbies for each member
+    for (const member of members) {
+      (member as any).hobbies = await this.getMemberHobbies(member.id);
+    }
+    
+    return members;
   }
 
-  async getClubMemberById(id: number): Promise<ClubMember | undefined> {
-    const [member] = await db.select().from(clubMembers).where(eq(clubMembers.id, id));
+  async getClubMemberById(id: number): Promise<any | undefined> {
+    const [member] = await db
+      .select({
+        id: clubMembers.id,
+        firstName: clubMembers.firstName,
+        lastName: clubMembers.lastName,
+        dob: clubMembers.dob,
+        height: clubMembers.height,
+        weight: clubMembers.weight,
+        ssn: clubMembers.ssn,
+        medicareCard: clubMembers.medicareCard,
+        phone: clubMembers.phone,
+        address: clubMembers.address,
+        city: clubMembers.city,
+        province: clubMembers.province,
+        postalCode: clubMembers.postalCode,
+        email: clubMembers.email,
+        gender: clubMembers.gender,
+        status: clubMembers.status,
+        joinDate: clubMembers.joinDate,
+        locationId: clubMembers.locationId,
+        locationName: locations.name
+      })
+      .from(clubMembers)
+      .leftJoin(locations, eq(clubMembers.locationId, locations.id))
+      .where(eq(clubMembers.id, id));
+    
+    if (member) {
+      (member as any).hobbies = await this.getMemberHobbies(member.id);
+    }
+    
     return member || undefined;
   }
 
@@ -169,12 +240,40 @@ export class DatabaseStorage implements IStorage {
     await db.delete(clubMembers).where(eq(clubMembers.id, id));
   }
 
-  async getActiveClubMembers(): Promise<ClubMember[]> {
-    return await db
-      .select()
+  async getActiveClubMembers(): Promise<any[]> {
+    const members = await db
+      .select({
+        id: clubMembers.id,
+        firstName: clubMembers.firstName,
+        lastName: clubMembers.lastName,
+        dob: clubMembers.dob,
+        height: clubMembers.height,
+        weight: clubMembers.weight,
+        ssn: clubMembers.ssn,
+        medicareCard: clubMembers.medicareCard,
+        phone: clubMembers.phone,
+        address: clubMembers.address,
+        city: clubMembers.city,
+        province: clubMembers.province,
+        postalCode: clubMembers.postalCode,
+        email: clubMembers.email,
+        gender: clubMembers.gender,
+        status: clubMembers.status,
+        joinDate: clubMembers.joinDate,
+        locationId: clubMembers.locationId,
+        locationName: locations.name
+      })
       .from(clubMembers)
+      .leftJoin(locations, eq(clubMembers.locationId, locations.id))
       .where(eq(clubMembers.status, "Active"))
       .orderBy(asc(clubMembers.lastName));
+    
+    // Get hobbies for each member
+    for (const member of members) {
+      (member as any).hobbies = await this.getMemberHobbies(member.id);
+    }
+    
+    return members;
   }
 
   async validateUniqueSSN(ssn: string, excludeId?: number): Promise<boolean> {
@@ -206,8 +305,61 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Family Members
-  async getFamilyMembers(): Promise<FamilyMember[]> {
-    return await db.select().from(familyMembers).orderBy(asc(familyMembers.lastName));
+  async getFamilyMembers(): Promise<any[]> {
+    const families = await db
+      .select({
+        id: familyMembers.id,
+        firstName: familyMembers.firstName,
+        lastName: familyMembers.lastName,
+        dob: familyMembers.dob,
+        ssn: familyMembers.ssn,
+        medicareCard: familyMembers.medicareCard,
+        phone: familyMembers.phone,
+        address: familyMembers.address,
+        city: familyMembers.city,
+        province: familyMembers.province,
+        postalCode: familyMembers.postalCode,
+        email: familyMembers.email,
+        locationId: familyMembers.locationId,
+        locationName: locations.name,
+        type: sql`'primary'`.as('type')
+      })
+      .from(familyMembers)
+      .leftJoin(locations, eq(familyMembers.locationId, locations.id))
+      .orderBy(asc(familyMembers.lastName));
+    
+    // Get secondary family members
+    const secondaryMembers = await db
+      .select({
+        id: secondaryFamilyMembers.id,
+        firstName: secondaryFamilyMembers.firstName,
+        lastName: secondaryFamilyMembers.lastName,
+        phone: secondaryFamilyMembers.phone,
+        relationship: secondaryFamilyMembers.relationship,
+        primaryFamilyId: secondaryFamilyMembers.primaryFamilyId,
+        primaryFamilyName: sql`${familyMembers.firstName} || ' ' || ${familyMembers.lastName}`.as('primaryFamilyName'),
+        type: sql`'secondary'`.as('type')
+      })
+      .from(secondaryFamilyMembers)
+      .leftJoin(familyMembers, eq(secondaryFamilyMembers.primaryFamilyId, familyMembers.id))
+      .orderBy(asc(secondaryFamilyMembers.lastName));
+    
+    // Get children relationships
+    for (const family of families) {
+      const children = await db
+        .select({
+          memberId: familyMemberChild.memberId,
+          relationship: familyMemberChild.relationship,
+          memberName: sql`${clubMembers.firstName} || ' ' || ${clubMembers.lastName}`.as('memberName')
+        })
+        .from(familyMemberChild)
+        .leftJoin(clubMembers, eq(familyMemberChild.memberId, clubMembers.id))
+        .where(eq(familyMemberChild.familyId, family.id));
+      
+      (family as any).children = children;
+    }
+    
+    return [...families, ...secondaryMembers];
   }
 
   async getFamilyMemberById(id: number): Promise<FamilyMember | undefined> {
@@ -234,8 +386,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Team Formations
-  async getTeamFormations(): Promise<TeamFormation[]> {
-    return await db.select().from(teamFormation).orderBy(asc(teamFormation.teamName));
+  async getTeamFormations(): Promise<any[]> {
+    const teams = await db
+      .select({
+        id: teamFormation.id,
+        teamName: teamFormation.teamName,
+        headCoachId: teamFormation.headCoachId,
+        locationId: teamFormation.locationId,
+        startDate: teamFormation.startDate,
+        endDate: teamFormation.endDate,
+        gender: teamFormation.gender,
+        headCoachName: sql`${personnel.firstName} || ' ' || ${personnel.lastName}`.as('headCoachName'),
+        locationName: locations.name
+      })
+      .from(teamFormation)
+      .leftJoin(personnel, eq(teamFormation.headCoachId, personnel.id))
+      .leftJoin(locations, eq(teamFormation.locationId, locations.id))
+      .orderBy(asc(teamFormation.teamName));
+    
+    // Get team members for each team
+    for (const team of teams) {
+      (team as any).members = await this.getTeamMembers(team.id);
+    }
+    
+    return teams;
   }
 
   async getTeamFormationById(id: number): Promise<TeamFormation | undefined> {
@@ -394,6 +568,107 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(emailLog.emailDate));
     
     return logs;
+  }
+
+  // Member Hobby Management
+  async addMemberHobby(memberId: number, hobbyId: number): Promise<void> {
+    await db.insert(memberHobby).values({ memberId, hobbyId });
+  }
+
+  async removeMemberHobby(memberId: number, hobbyId: number): Promise<void> {
+    await db.delete(memberHobby)
+      .where(and(eq(memberHobby.memberId, memberId), eq(memberHobby.hobbyId, hobbyId)));
+  }
+
+  async getMemberHobbies(memberId: number): Promise<Hobby[]> {
+    const result = await db
+      .select({
+        id: hobbies.id,
+        name: hobbies.name
+      })
+      .from(memberHobby)
+      .innerJoin(hobbies, eq(memberHobby.hobbyId, hobbies.id))
+      .where(eq(memberHobby.memberId, memberId));
+    
+    return result;
+  }
+
+  // Secondary Family Member Management
+  async createSecondaryFamilyMember(data: any): Promise<any> {
+    const [newMember] = await db.insert(secondaryFamilyMembers).values(data).returning();
+    return newMember;
+  }
+
+  async updateSecondaryFamilyMember(id: number, data: any): Promise<any> {
+    const [updatedMember] = await db
+      .update(secondaryFamilyMembers)
+      .set(data)
+      .where(eq(secondaryFamilyMembers.id, id))
+      .returning();
+    return updatedMember;
+  }
+
+  async deleteSecondaryFamilyMember(id: number): Promise<void> {
+    await db.delete(secondaryFamilyMembers).where(eq(secondaryFamilyMembers.id, id));
+  }
+
+  // Team Member Management
+  async addTeamMember(teamId: number, memberId: number, role: string): Promise<void> {
+    await db.insert(teamMembers).values({ 
+      teamId, 
+      memberId, 
+      role: role as any
+    });
+  }
+
+  async removeTeamMember(teamId: number, memberId: number): Promise<void> {
+    await db.delete(teamMembers)
+      .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.memberId, memberId)));
+  }
+
+  async getTeamMembers(teamId: number): Promise<any[]> {
+    const result = await db
+      .select({
+        id: clubMembers.id,
+        firstName: clubMembers.firstName,
+        lastName: clubMembers.lastName,
+        role: teamMembers.role
+      })
+      .from(teamMembers)
+      .innerJoin(clubMembers, eq(teamMembers.memberId, clubMembers.id))
+      .where(eq(teamMembers.teamId, teamId));
+    
+    return result;
+  }
+
+  async validateTeamMemberAssignment(memberId: number, sessionDate: string, startTime: string): Promise<boolean> {
+    // Check for conflicts - member can't have sessions within 3 hours
+    const existingSessions = await db
+      .select()
+      .from(teamMembers)
+      .innerJoin(teamFormation, eq(teamMembers.teamId, teamFormation.id))
+      .innerJoin(sessions, sql`${sessions.team1Id} = ${teamFormation.id} OR ${sessions.team2Id} = ${teamFormation.id}`)
+      .where(and(
+        eq(teamMembers.memberId, memberId),
+        eq(sessions.sessionDate, sessionDate)
+      ));
+
+    if (existingSessions.length === 0) return true;
+
+    // Check time conflicts (3+ hour difference required)
+    const newSessionTime = new Date(`${sessionDate} ${startTime}`);
+    
+    for (const existing of existingSessions) {
+      const existingTime = new Date(`${sessionDate} ${existing.sessions.startTime}`);
+      const timeDiff = Math.abs(newSessionTime.getTime() - existingTime.getTime());
+      const hoursDiff = timeDiff / (1000 * 60 * 60);
+      
+      if (hoursDiff < 3) {
+        return false; // Conflict found
+      }
+    }
+    
+    return true;
   }
 }
 

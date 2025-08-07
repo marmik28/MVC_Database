@@ -22,23 +22,62 @@ type MemberFormData = z.infer<typeof memberFormSchema>;
 interface AddMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editMember?: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    dob: string;
+    gender: "Male" | "Female";
+    height?: number;
+    weight?: number;
+    phone?: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    province?: string;
+    postalCode?: string;
+    locationId?: number;
+    ssn: string;
+    medicareCard: string;
+    status: "Active" | "Inactive";
+    joinDate: string;
+  } | null;
 }
 
-export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps) {
+export default function AddMemberModal({ isOpen, onClose, editMember }: AddMemberModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isMinor, setIsMinor] = useState(false);
 
   const form = useForm<MemberFormData>({
     resolver: zodResolver(memberFormSchema),
-    defaultValues: {
+    defaultValues: editMember ? {
+      firstName: editMember.firstName,
+      lastName: editMember.lastName,
+      dob: editMember.dob,
+      gender: editMember.gender,
+      height: editMember.height?.toString() || "",
+      weight: editMember.weight?.toString() || "",
+      phone: editMember.phone,
+      email: editMember.email,
+      address: editMember.address,
+      city: editMember.city,
+      province: editMember.province,
+      postalCode: editMember.postalCode,
+      locationId: editMember.locationId,
+      ssn: editMember.ssn,
+      medicareCard: editMember.medicareCard,
+      status: editMember.status as "Active" | "Inactive",
+      joinDate: editMember.joinDate,
+      confirmAge: true
+    } : {
       status: "Active",
       joinDate: new Date().toISOString().split('T')[0],
       confirmAge: false
     }
   });
 
-  const { data: locations = [] } = useQuery({
+  const { data: locations = [] } = useQuery<Array<{id: number; name: string}>>({
     queryKey: ["/api/locations"],
   });
 
@@ -46,26 +85,30 @@ export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps)
     queryKey: ["/api/hobbies"],
   });
 
-  const { data: families = [] } = useQuery({
+  const { data: families = [] } = useQuery<Array<{id: number; firstName: string; lastName: string}>>({
     queryKey: ["/api/families"],
   });
 
-  const createMemberMutation = useMutation({
+  const memberMutation = useMutation({
     mutationFn: async (data: Omit<MemberFormData, 'confirmAge'>) => {
-      const response = await apiRequest("POST", "/api/members", data);
+      const url = editMember ? `/api/members/${editMember.id}` : "/api/members";
+      const method = editMember ? "PUT" : "POST";
+      const response = await apiRequest(method, url, data);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-      toast({ title: "Success", description: "Member created successfully" });
+      const action = editMember ? "updated" : "created";
+      toast({ title: "Success", description: `Member ${action} successfully` });
       onClose();
       form.reset();
     },
     onError: (error: any) => {
+      const action = editMember ? "update" : "create";
       toast({ 
         title: "Error", 
-        description: error.message || "Failed to create member",
+        description: error.message || `Failed to ${action} member`,
         variant: "destructive"
       });
     }
@@ -83,14 +126,14 @@ export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps)
 
   const onSubmit = (data: MemberFormData) => {
     const { confirmAge, ...memberData } = data;
-    createMemberMutation.mutate(memberData);
+    memberMutation.mutate(memberData);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Club Member</DialogTitle>
+          <DialogTitle>{editMember ? "Edit Club Member" : "Add New Club Member"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -137,7 +180,10 @@ export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps)
 
               <div>
                 <Label htmlFor="gender">Gender</Label>
-                <Select onValueChange={(value) => form.setValue("gender", value as "Male" | "Female")}>
+                <Select 
+                  value={form.watch("gender") || ""} 
+                  onValueChange={(value) => form.setValue("gender", value as "Male" | "Female")}
+                >
                   <SelectTrigger data-testid="select-gender">
                     <SelectValue placeholder="Select Gender" />
                   </SelectTrigger>
@@ -218,7 +264,10 @@ export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps)
 
               <div>
                 <Label htmlFor="province">Province</Label>
-                <Select onValueChange={(value) => form.setValue("province", value)}>
+                <Select 
+                  value={form.watch("province") || ""} 
+                  onValueChange={(value) => form.setValue("province", value)}
+                >
                   <SelectTrigger data-testid="select-province">
                     <SelectValue placeholder="Select Province" />
                   </SelectTrigger>
@@ -251,12 +300,15 @@ export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps)
 
               <div>
                 <Label htmlFor="locationId">Location</Label>
-                <Select onValueChange={(value) => form.setValue("locationId", parseInt(value))}>
+                <Select 
+                  value={form.watch("locationId")?.toString() || ""} 
+                  onValueChange={(value) => form.setValue("locationId", parseInt(value))}
+                >
                   <SelectTrigger data-testid="select-location">
                     <SelectValue placeholder="Select Location" />
                   </SelectTrigger>
                   <SelectContent>
-                    {locations.map((location: any) => (
+                    {locations.map((location) => (
                       <SelectItem key={location.id} value={location.id.toString()}>
                         {location.name}
                       </SelectItem>
@@ -310,7 +362,7 @@ export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps)
                       <SelectValue placeholder="Select Family Member" />
                     </SelectTrigger>
                     <SelectContent>
-                      {families.map((family: any) => (
+                      {families.map((family) => (
                         <SelectItem key={family.id} value={family.id.toString()}>
                           {family.firstName} {family.lastName}
                         </SelectItem>
@@ -368,10 +420,13 @@ export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps)
             </Button>
             <Button 
               type="submit" 
-              disabled={createMemberMutation.isPending}
-              data-testid="button-create-member"
+              disabled={memberMutation.isPending}
+              data-testid={editMember ? "button-update-member" : "button-create-member"}
             >
-              {createMemberMutation.isPending ? "Creating..." : "Create Member"}
+              {memberMutation.isPending 
+                ? (editMember ? "Updating..." : "Creating...") 
+                : (editMember ? "Update Member" : "Create Member")
+              }
             </Button>
           </div>
         </form>
