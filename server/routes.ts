@@ -111,7 +111,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const memberData = insertClubMemberSchema.parse(req.body);
       
-      // Validate unique SSN and Medicare Card
       const isSSNUnique = await storage.validateUniqueSSN(memberData.ssn);
       if (!isSSNUnique) {
         return res.status(400).json({ message: "SSN already exists" });
